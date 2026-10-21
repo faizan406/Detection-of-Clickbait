@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clickbait Detector | Real-time Machine Learning & Explainable Analytics</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2.5">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    (function() {
+      try {
+        var t = localStorage.getItem('clickbait_theme');
+        if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      } catch(e) {}
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Full Application Layout -->
+  <div class="app-layout" id="app-layout" style="display: {% if is_authenticated %}flex{% else %}none{% endif %};">
+    
+    <!-- LEFT SIDEBAR (Dark Navy #0c1222) -->
+    <aside class="app-sidebar" id="app-sidebar">
+      <!-- Sidebar Brand Header -->
+      <div class="sidebar-brand-wrapper" id="brand-home-btn" role="button" tabindex="0" title="Go to Real-time Detector">
+        <div class="sidebar-brand-icon">
+          <i class="fa-solid fa-bullhorn"></i>
+        </div>
+        <div class="sidebar-brand-title">Clickbait Detector</div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="sidebar-nav" id="app-nav-tabs">
+        <button class="sidebar-nav-btn tab-btn active" data-tab="detector" id="nav-tab-detector">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>Detector</span>
+        </button>
+        <button class="sidebar-nav-btn tab-btn" data-tab="wordcloud" id="nav-tab-wordcloud">
+          <i class="fa-solid fa-chart-simple"></i>
+          <span>Word Cloud</span>
+        </button>
+        <button class="sidebar-nav-btn tab-btn" data-tab="studio" id="nav-tab-studio">
+          <i class="fa-solid fa-brain"></i>
+          <span>ML Studio</span>
+        </button>
+        <button class="sidebar-nav-btn tab-btn" data-tab="history" id="nav-tab-history">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>History Log</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Footer (System Settings) -->
+      <div class="sidebar-footer">
+        <button class="sidebar-nav-btn sidebar-settings-btn" id="sidebar-settings-btn" title="Configure System Settings">
+          <i class="fa-solid fa-gear"></i>
+          <span>System Settings</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- RIGHT / MAIN VIEWPORT (Topbar + Content Canvas) -->
+    <div class="app-viewport">
+      
+      <!-- TOP BAR (Clean White #ffffff) -->
+      <header class="app-topbar">
+        <!-- Left group: Sidebar Toggle + Breadcrumb -->
+        <div class="topbar-left">
+          <!-- Sidebar Toggle Button -->
+          <button class="topbar-icon-btn" id="sidebar-toggle-btn" title="Toggle Sidebar" aria-label="Toggle sidebar navigation">
+            <i class="fa-solid fa-bars" id="sidebar-toggle-icon"></i>
+          </button>
+          <!-- Breadcrumb Navigation -->
+          <div class="topbar-breadcrumb" id="topbar-breadcrumb">
+            <span class="bc-category" id="bc-category">Analyzer</span>
+            <span class="bc-slash">/</span>
+            <span class="bc-page" id="bc-page">Real-time Detector</span>
+          </div>
+        </div>
+
+        <!-- Topbar Right Actions -->
+        <div class="topbar-right">
+          <!-- Analyze Another Headline button (shown when result is active) -->
+          <button class="topbar-analyze-another-btn" id="topbar-reset-btn" title="Clear result and analyze a new headline" style="display:none;">
+            <i class="fa-solid fa-arrow-rotate-left"></i>
+            <span>New Analysis</span>
+          </button>
+
+          <!-- Active Status Badge -->
+          <div class="system-active-pill" id="system-status-indicator" title="Production ML Engine Online (90.8% Accuracy)">
+            <span class="status-pulse-dot"></span>
+            <span class="status-label">SYSTEM ACTIVE</span>
+          </div>
+
+          <!-- Notification Bell -->
+          <div class="notif-wrapper">
+            <button class="topbar-icon-btn" id="notif-bell-btn" title="System Alerts & Notifications">
+              <i class="fa-regular fa-bell"></i>
+              <span class="notif-badge-dot"></span>
+            </button>
+            <div class="notif-popover" id="notif-popover">
+              <div class="notif-popover-header">
+                <strong>System Notifications</strong>
+                <span class="notif-count">2 New</span>
+              </div>
+              <div class="notif-item">
+                <div class="notif-icon-circle"><i class="fa-solid fa-circle-check"></i></div>
+                <div>
+                  <div class="notif-msg">Model updated with 94,336 headlines (90.8% accuracy).</div>
+                  <div class="notif-time">Just now</div>
+                </div>
+              </div>
+              <div class="notif-item">
+                <div class="notif-icon-circle"><i class="fa-solid fa-shield-halved"></i></div>
+                <div>
+                  <div class="notif-msg">SSRF Protection active for live URL scraping.</div>
+                  <div class="notif-time">Operational</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Theme Toggle Button -->
+          <button class="topbar-icon-btn" id="topbar-theme-toggle-btn" title="Toggle Visual Theme">
+            <i class="fa-solid fa-moon" id="topbar-theme-icon"></i>
+          </button>
+
+          <!-- Search Bar -->
+          <div class="topbar-search-box">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="topbar-search-input" placeholder="Search" autocomplete="off">
+          </div>
+
+          <!-- User Profile & Dropdown -->
+          <div id="user-nav"></div>
+        </div>
+      </header>
+
+      <!-- MAIN CONTENT CANVAS (Blueprint grid background) -->
+      <main class="main-content-canvas" id="main-app">
+        
+        <!-- TAB 1: REAL-TIME DETECTOR -->
+        <section id="tab-detector" class="tab-content active">
+          <div class="detector-layout-grid" id="detector-grid">
+
+          <!-- CARD 1: Input Card (Vertical Layout with Collapse/Expand Arrow) -->
+            <div class="clean-card input-card" id="panel-input">
+              <div class="card-collapse-header" id="header-input-card">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <h2 class="card-main-title" style="margin-bottom:0;">Input Content for Analysis</h2>
+                  <span class="card-collapsed-badge" id="badge-collapsed-input" style="display:none;">
+                    <i class="fa-solid fa-layer-group"></i> Collapsed
+                  </span>
+                </div>
+                <button type="button" class="card-collapse-toggle-btn" id="collapse-input-btn" title="Collapse / Expand Input Panel" aria-label="Collapse or Expand Input Panel">
+                  <i class="fa-solid fa-chevron-up"></i>
+                </button>
+              </div>
+
+              <div class="card-collapsible-content" id="input-card-content" style="margin-top: 16px;">
+                <!-- Card Header Segmented Switcher & Quick Tools -->
+                <div class="input-card-controls">
+                  <div class="segmented-control">
+                    <button type="button" id="mode-text-btn" class="seg-btn active">
+                      <i class="fa-solid fa-bars-staggered"></i>
+                      <span>Headline / Text</span>
+                    </button>
+                    <button type="button" id="mode-url-btn" class="seg-btn">
+                      <i class="fa-solid fa-globe"></i>
+                      <span>Live URL Analysis</span>
+                    </button>
+                  </div>
+
+                  <div class="quick-tools-group">
+                    <button type="button" class="tool-icon-btn" id="quick-paste-btn" title="Paste text from clipboard">
+                      <i class="fa-regular fa-paste"></i>
+                    </button>
+                    <button type="button" class="tool-icon-btn" id="quick-link-btn" title="Toggle Live URL Mode">
+                      <i class="fa-solid fa-link"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Mode A: Headline Text Input Pane -->
+                <div id="text-input-box" class="mode-input-pane active">
+                  <div class="textarea-card-wrapper">
+                    <textarea id="headline-input" class="modern-textarea" placeholder="Type or paste a news headline to inspect (e.g. '15 Shocking Facts That Will Change Your Life Forever' or 'Central Bank Raises Interest Rates By 0.5%')..."></textarea>
+                    <div class="counter-row">
+                      <span id="char-count" class="char-count-text">0 / 1,000</span>
+                    </div>
+                  </div>
+
+                  <!-- Inline Example Prompts -->
+                  <div class="examples-section">
+                    <div class="examples-tag">
+                      <i class="fa-solid fa-pen"></i> TRY AN EXAMPLE:
+                    </div>
+                    <div class="example-chips-wrap">
+                      <button type="button" class="example-chip sample-chip">15 Shocking Facts</button>
+                      <button type="button" class="example-chip sample-chip">Central Bank Rates</button>
+                      <button type="button" class="example-chip sample-chip">Doctor Secrets</button>
+                      <button type="button" class="example-chip sample-chip">NASA Mars Rover</button>
+                    </div>
+                  </div>
+
+                  <!-- Action Button -->
+                  <button type="button" id="analyze-btn" class="gradient-action-btn">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Analyze Headline</span>
+                  </button>
+                </div>
+
+                <!-- Mode B: URL Input Pane -->
+                <div id="url-input-box" class="mode-input-pane" style="display: none;">
+                  <div class="url-input-card-wrapper">
+                    <div class="url-field-group">
+                      <i class="fa-solid fa-link url-field-icon"></i>
+                      <input type="url" id="url-input" class="modern-url-input" placeholder="https://www.bbc.com/news/articles/c04918e76v7o">
+                    </div>
+                    
+                    <div class="security-info-box">
+                      <i class="fa-solid fa-shield-halved"></i>
+                      <span>SSRF Protected: Live webpage content is extracted & validated securely.</span>
+                    </div>
+                  </div>
+
+                  <!-- Sample URLs -->
+                  <div class="examples-section">
+                    <div class="examples-tag">
+                      <i class="fa-solid fa-compass"></i> TRY A SAMPLE URL:
+                    </div>
+                    <div class="example-chips-wrap">
+                      <button type="button" class="example-chip sample-url-chip" data-url="https://www.bbc.com/news/articles/c04918e76v7o">
+                        BBC News Article
+                      </button>
+                      <button type="button" class="example-chip sample-url-chip" data-url="https://www.buzzfeed.com/test-article-shocking-facts">
+                        BuzzFeed Article
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Action Button for URL -->
+                  <button type="button" id="analyze-url-btn" class="gradient-action-btn">
+                    <i class="fa-solid fa-globe"></i>
+                    <span>Analyze Webpage</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Engine Overview OR Prediction Result -->
+            <div class="engine-display-column">
+
+              <!-- Initial Engine State (Exact Replica from Screenshot) -->
+              <div class="clean-card engine-state-card" id="result-placeholder">
+                <div class="card-collapse-header" id="header-engine-card">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div class="engine-badge-pill" style="margin-bottom:0;">
+                      <i class="fa-solid fa-bolt"></i> REAL-TIME DETECTION ENGINE
+                    </div>
+                    <span class="card-collapsed-badge" id="badge-collapsed-engine" style="display:none;">
+                      <i class="fa-solid fa-layer-group"></i> Collapsed
+                    </span>
+                  </div>
+                  <button type="button" class="card-collapse-toggle-btn" id="collapse-engine-btn" title="Collapse / Expand Engine Overview" aria-label="Collapse or Expand Engine Overview">
+                    <i class="fa-solid fa-chevron-up"></i>
+                  </button>
+                </div>
+
+                <div class="card-collapsible-content" id="engine-card-content" style="margin-top: 18px;">
+
+                  <!-- How-To Steps for first-time users -->
+                  <div style="margin-bottom: 14px;">
+                    <h3 class="engine-heading" style="margin-bottom: 4px;">How to Use the Detector</h3>
+                    <p class="engine-subheading">Follow these 3 simple steps to analyze any headline or article:</p>
+                  </div>
+                  <div class="how-to-steps">
+                    <div class="how-to-step">
+                      <div class="step-num">1</div>
+                      <div class="step-body">
+                        <div class="step-title">Enter Content</div>
+                        <div class="step-desc">Type or paste a headline, news excerpt, <strong>or</strong> switch to <em>Live URL Analysis</em> and paste a webpage link.</div>
+                      </div>
+                    </div>
+                    <div class="how-to-step-arrow"><i class="fa-solid fa-chevron-down"></i></div>
+                    <div class="how-to-step">
+                      <div class="step-num">2</div>
+                      <div class="step-body">
+                        <div class="step-title">Click Analyze</div>
+                        <div class="step-desc">Hit the gradient <strong>Analyze Headline</strong> button — results appear here in seconds.</div>
+                      </div>
+                    </div>
+                    <div class="how-to-step-arrow"><i class="fa-solid fa-chevron-down"></i></div>
+                    <div class="how-to-step">
+                      <div class="step-num">3</div>
+                      <div class="step-body">
+                        <div class="step-title">Read the Report</div>
+                        <div class="step-desc">A full detection & authenticity report with XAI keywords and live fact-check sources will display below.</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 3 Feature Highlight Cards -->
+                  <div class="feature-cards-stack" style="margin-top: 20px;">
+                    <!-- Feature 1: Benchmark Accuracy -->
+                    <div class="feature-item-card">
+                      <div class="feature-icon-circle blue-theme">
+                        <i class="fa-solid fa-circle-notch"></i>
+                      </div>
+                      <div class="feature-content-group">
+                        <div class="feature-title">90.8% Benchmark Accuracy</div>
+                        <div class="feature-desc">Trained on 94,336 verified clickbait and legitimate news headlines.</div>
+                      </div>
+                    </div>
+
+                    <!-- Feature 2: Explainable AI -->
+                    <div class="feature-item-card">
+                      <div class="feature-icon-circle amber-theme">
+                        <i class="fa-regular fa-lightbulb"></i>
+                      </div>
+                      <div class="feature-content-group">
+                        <div class="feature-title">Explainable AI (XAI)</div>
+                        <div class="feature-desc">Identifies individual token weights driving the classification decision.</div>
+                      </div>
+                    </div>
+
+                    <!-- Feature 3: Secure Live URL Parser -->
+                    <div class="feature-item-card">
+                      <div class="feature-icon-circle emerald-theme">
+                        <i class="fa-solid fa-shield-halved"></i>
+                      </div>
+                      <div class="feature-content-group">
+                        <div class="feature-title">Secure Live URL Parser</div>
+                        <div class="feature-desc">Full HTML article body scraper protected against SSRF vulnerabilities.</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            </div>
+
+              <!-- Prediction Result Card (Shown when analysis is executed) -->
+              <div class="clean-card result-container-card" id="result-container" style="display: none;">
+                <div class="card-collapse-header" id="header-result-card" style="margin-bottom: 16px;">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div class="engine-badge-pill" style="margin-bottom:0;">
+                      <i class="fa-solid fa-chart-line"></i> DETECTION & AUTHENTICITY REPORT
+                    </div>
+                    <span class="card-collapsed-badge" id="badge-collapsed-result" style="display:none;">
+                      <i class="fa-solid fa-layer-group"></i> Collapsed
+                    </span>
+                  </div>
+                  <button type="button" class="card-collapse-toggle-btn" id="collapse-result-btn" title="Collapse / Expand Result Panel" aria-label="Collapse or Expand Result Panel">
+                    <i class="fa-solid fa-chevron-up"></i>
+                  </button>
+                </div>
+
+                <div class="card-collapsible-content" id="result-card-content">
+                  <!-- URL Source Metadata Banner (when analyzing URL) -->
+                  <div id="res-url-banner" class="res-url-source-box" style="display: none;">
+                  <span class="url-source-tag"><i class="fa-solid fa-globe"></i> Source Webpage URL</span>
+                  <a id="res-url-link" href="#" target="_blank" rel="noopener noreferrer" class="url-source-link"></a>
+                </div>
+
+                <!-- Headline Preview Header -->
+                <div class="prediction-header-group">
+                  <div class="headline-info">
+                    <span class="prediction-type-tag" id="res-type-label">Headline Outcome</span>
+                    <h3 class="prediction-headline-text" id="res-headline-preview">"Headline Text"</h3>
+                    <button type="button" id="toggle-headline-btn" class="text-expand-btn">
+                      <i class="fa-solid fa-book-open"></i> Read More
+                    </button>
+                  </div>
+                  <div class="dual-badges-stack">
+                    <div id="res-badge" class="result-badge clickbait">Clickbait</div>
+                    <div id="res-auth-badge" class="result-badge auth-verified">Verified Authentic</div>
+                  </div>
+                </div>
+
+                <!-- DUAL-ENGINE VERDICT SECTION -->
+
+                <!-- ENGINE 2: REAL-TIME FACTUAL AUTHENTICITY & FAKE NEWS CORROBORATOR -->
+                <div class="authenticity-panel-card" id="res-auth-card">
+                  <div class="auth-panel-top">
+                    <div class="auth-title-group">
+                      <span class="auth-engine-tag"><i class="fa-solid fa-satellite-dish"></i> Live Factuality & Fake News Engine</span>
+                      <h4 class="auth-claim-title" id="res-auth-claim-type">Factual Assessment</h4>
+                    </div>
+                    <span class="auth-consensus-pill" id="res-auth-consensus">Checking Wire Consensus...</span>
+                  </div>
+
+                  <div class="auth-explanation-box" id="res-auth-explanation">
+                    Evaluating real-world news reports...
+                  </div>
+
+                  <!-- Live News Wire Evidence Citations -->
+                  <div class="auth-evidence-box" id="res-auth-evidence-container">
+                    <div class="evidence-header">
+                      <i class="fa-solid fa-newspaper"></i> Live Wire Reports & Fact-Check Sources:
+                    </div>
+                    <div class="evidence-chips-list" id="res-auth-sources-list">
+                      <!-- Dynamically populated citations -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ENGINE 1: LINGUISTIC STYLE & CURIOSITY GAPS -->
+                <div class="style-panel-card">
+                  <div class="style-panel-top">
+                    <span class="style-engine-tag"><i class="fa-solid fa-wand-magic-sparkles"></i> Linguistic Style Analysis (90.8% ML Pipeline)</span>
+                  </div>
+
+                  <!-- Dual Likelihood Breakdown -->
+                  <div class="prob-grid-layout">
+                    <div class="prob-box clickbait-box">
+                      <div class="prob-box-top">
+                        <span class="prob-label"><i class="fa-solid fa-triangle-exclamation"></i> Clickbait Likelihood</span>
+                        <strong class="prob-number" id="res-prob-cb-text">0%</strong>
+                      </div>
+                      <div class="progress-track">
+                        <div id="res-prob-cb-bar" class="progress-fill clickbait" style="width: 0%;"></div>
+                      </div>
+                    </div>
+
+                    <div class="prob-box nonclickbait-box">
+                      <div class="prob-box-top">
+                        <span class="prob-label"><i class="fa-solid fa-circle-check"></i> Non-Clickbait Rating</span>
+                        <strong class="prob-number" id="res-prob-non-cb-text">0%</strong>
+                      </div>
+                      <div class="progress-track">
+                        <div id="res-prob-non-cb-bar" class="progress-fill non-clickbait" style="width: 0%;"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Extracted Article Body Box (for URL mode) -->
+                <div id="res-body-container" style="display: none;" class="extracted-body-card">
+                  <div class="body-header-tag">
+                    <i class="fa-solid fa-file-lines"></i> Extracted Webpage Article Content (<span id="res-word-count">0</span> words analyzed)
+                  </div>
+                  <div id="res-body-text" class="body-preview-text"></div>
+                  <button type="button" id="toggle-body-btn" class="text-expand-btn" style="margin-top: 8px;">
+                    <i class="fa-solid fa-book-open"></i> Read More
+                  </button>
+                </div>
+
+                <!-- Key Classification Factors -->
+                <div class="factors-card-box" id="res-reasons-container">
+                  <div class="factors-card-title">
+                    <i class="fa-solid fa-clipboard-check"></i> Key Linguistic Style Factors & Reasoning:
+                  </div>
+                  <ul class="factors-bullet-list" id="res-reasons-list"></ul>
+                </div>
+
+                <!-- XAI Influential Keywords -->
+                <div class="xai-card-box">
+                  <div class="xai-header-row">
+                    <div class="xai-title-wrap">
+                      <i class="fa-solid fa-lightbulb"></i> Influential Keywords (XAI)
+                    </div>
+                    <div class="xai-control-wrap">
+                      <span>Display:</span>
+                      <select id="xai-limit-select" class="clean-select-sm">
+                        <option value="6" selected>Top 6 Words</option>
+                        <option value="10">Top 10 Words</option>
+                        <option value="20">Top 20 Words</option>
+                        <option value="50">Top 50 Words</option>
+                      </select>
+                    </div>
+                  </div>
+                  <p class="xai-helper-text">
+                    Highlighted tokens contributing most significantly to the classification decision:
+                  </p>
+                  <div class="xai-token-chips" id="res-xai-words"></div>
+                </div>
+
+                <!-- Linguistic Signals -->
+                <div class="linguistic-signals-box" id="linguistic-box"></div>
+
+                <!-- Reset Button -->
+                <div class="result-footer-actions">
+                  <button type="button" id="reset-result-btn" class="btn-clean-outline">
+                    <i class="fa-solid fa-arrow-rotate-left"></i> Analyze Another Headline
+                  </button>
+                </div>
+              </div> <!-- close result-card-content -->
+            </div> <!-- close result-container -->
+
+            </div>
+
+          </div>
+        </section>
+
+        <!-- TAB 2: WORD CLOUD INSIGHTS -->
+        <section id="tab-wordcloud" class="tab-content">
+          <div class="subpage-header-row">
+            <div>
+              <h2 class="subpage-title">Word Cloud Insights & Lexicon Visualizer</h2>
+              <p class="subpage-subtitle">Discover the most frequent and defining words distinguishing Clickbait vs Non-Clickbait headlines.</p>
+            </div>
+            <div class="subpage-actions-group">
+              <select id="wordcloud-limit" class="clean-select" style="width: 140px;">
+                <option value="30">Top 30 Words</option>
+                <option value="50" selected>Top 50 Words</option>
+                <option value="80">Top 80 Words</option>
+              </select>
+              <button id="generate-wordcloud-btn" class="gradient-action-btn" style="padding: 10px 18px; font-size: 14px;">
+                <i class="fa-solid fa-arrows-rotate"></i> Generate Word Clouds
+              </button>
+            </div>
+          </div>
+
+          <!-- Word Cloud Dual Cards Grid -->
+          <div class="detector-layout-grid">
+            <div class="clean-card cloud-card">
+              <div class="cloud-header-top">
+                <h3 class="cloud-heading clickbait-text">
+                  <i class="fa-solid fa-fire-flame-curved"></i> Most Common Clickbait Words
+                </h3>
+                <span class="badge clickbait badge-sm" id="cb-sample-count">-- Samples</span>
+              </div>
+              <div id="clickbait-wordcloud" class="wordcloud-container">
+                <span class="cloud-placeholder">Click "Generate Word Clouds" to load terms...</span>
+              </div>
+            </div>
+
+            <div class="clean-card cloud-card">
+              <div class="cloud-header-top">
+                <h3 class="cloud-heading nonclickbait-text">
+                  <i class="fa-solid fa-newspaper"></i> Most Common Non-Clickbait Words
+                </h3>
+                <span class="badge non-clickbait badge-sm" id="noncb-sample-count">-- Samples</span>
+              </div>
+              <div id="nonclickbait-wordcloud" class="wordcloud-container">
+                <span class="cloud-placeholder">Click "Generate Word Clouds" to load terms...</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: ML STUDIO & RETRAINING -->
+        <section id="tab-studio" class="tab-content">
+          <div class="subpage-header-row">
+            <div>
+              <h2 class="subpage-title">Machine Learning Model Studio</h2>
+              <p class="subpage-subtitle">View performance evaluation metrics, upload custom CSV datasets, and retrain the classification pipeline.</p>
+            </div>
+          </div>
+
+          <!-- 4 Metrics Cards Grid -->
+          <div class="metrics-grid">
+            <div class="clean-card metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">Model Accuracy</span>
+                <div class="metric-icon-badge blue-theme"><i class="fa-solid fa-bullseye"></i></div>
+              </div>
+              <div class="metric-value-text" id="metric-accuracy">90.8%</div>
+              <span class="metric-subtext">Overall correctness on test split</span>
+            </div>
+
+            <div class="clean-card metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">Precision</span>
+                <div class="metric-icon-badge emerald-theme"><i class="fa-solid fa-crosshairs"></i></div>
+              </div>
+              <div class="metric-value-text" id="metric-precision">91.2%</div>
+              <span class="metric-subtext">Positive predictive value</span>
+            </div>
+
+            <div class="clean-card metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">Recall</span>
+                <div class="metric-icon-badge amber-theme"><i class="fa-solid fa-arrows-to-eye"></i></div>
+              </div>
+              <div class="metric-value-text" id="metric-recall">88.9%</div>
+              <span class="metric-subtext">True positive sensitivity rate</span>
+            </div>
+
+            <div class="clean-card metric-card">
+              <div class="metric-card-top">
+                <span class="metric-label">F1-Score</span>
+                <div class="metric-icon-badge purple-theme"><i class="fa-solid fa-chart-line"></i></div>
+              </div>
+              <div class="metric-value-text" id="metric-f1">90.0%</div>
+              <span class="metric-subtext">Harmonic mean balance metric</span>
+            </div>
+          </div>
+
+          <!-- Dataset Upload & Retraining Grid -->
+          <div class="detector-layout-grid" style="margin-top: 24px;">
+            <div class="clean-card studio-card">
+              <h3 class="studio-card-title">Upload Custom Dataset (CSV)</h3>
+              <p class="studio-card-subtitle">
+                Upload a CSV file containing <code class="code-tag">headline</code> and <code class="code-tag">label</code> columns (1 = Clickbait, 0 = Non-Clickbait).
+              </p>
+
+              <form id="upload-form">
+                <div class="drop-zone" id="drop-zone">
+                  <div class="drop-zone-icon">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                  </div>
+                  <p class="drop-zone-primary">Drag & drop your CSV file here</p>
+                  <p class="drop-zone-secondary">or click to browse files</p>
+                  <input type="file" id="dataset-file" accept=".csv" style="display: none;">
+                </div>
+
+                <div id="file-info" class="file-info-badge" style="display: none;">
+                  <i class="fa-solid fa-file-csv"></i> <span id="file-name-text">filename.csv</span>
+                </div>
+
+                <div style="margin-top: 1.25rem;">
+                  <button type="submit" class="gradient-action-btn" style="width: 100%; justify-content: center;">
+                    <i class="fa-solid fa-upload"></i> Upload & Validate Dataset
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div class="clean-card studio-card">
+              <h3 class="studio-card-title">Adaptive Model Retraining</h3>
+              <p class="studio-card-subtitle">
+                Retrain the TF-IDF Vectorizer & Logistic Regression model using the latest merged dataset.
+              </p>
+
+              <div class="active-dataset-card">
+                <div class="active-dataset-label">Active Training Dataset</div>
+                <div class="active-dataset-name" id="active-dataset-text">dataset.csv (94,336 headlines - Merged Benchmark)</div>
+              </div>
+
+              <button id="retrain-btn" class="gradient-action-btn retrain-btn-style">
+                <i class="fa-solid fa-arrows-rotate"></i> Retrain Model Now
+              </button>
+
+              <div id="train-status" class="train-status-msg" style="display: none;"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: HISTORY LOG -->
+        <section id="tab-history" class="tab-content">
+          <div class="subpage-header-row">
+            <div>
+              <h2 class="subpage-title">Detection History Log</h2>
+              <p class="subpage-subtitle">View, search, and filter previous headline classification records.</p>
+            </div>
+
+            <div class="history-controls-row">
+              <div class="history-search-input-wrap">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="history-search" class="clean-input" placeholder="Search headlines or URLs...">
+              </div>
+              <button id="clear-history-btn" class="btn-clean-danger">
+                <i class="fa-solid fa-trash-can"></i> Clear All
+              </button>
+            </div>
+          </div>
+
+          <div class="clean-card history-table-card">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="col-date">Date &amp; Time</th>
+                    <th class="col-source">
+                      <div class="th-filter-header">
+                        <span>Source</span>
+                        <select id="th-filter-source" class="th-col-select" title="Filter by source">
+                          <option value="All">All</option>
+                          <option value="text">Text</option>
+                          <option value="url">URL</option>
+                        </select>
+                      </div>
+                    </th>
+                    <th class="col-headline">Headline / Article</th>
+                    <th class="col-style">
+                      <div class="th-filter-header">
+                        <span>Style</span>
+                        <select id="th-filter-style" class="th-col-select" title="Filter by style">
+                          <option value="All">All</option>
+                          <option value="Clickbait">Clickbait</option>
+                          <option value="Non-Clickbait">Non-Clickbait</option>
+                        </select>
+                      </div>
+                    </th>
+                    <th class="col-auth">
+                      <div class="th-filter-header">
+                        <span>Authenticity</span>
+                        <select id="th-filter-auth" class="th-col-select" title="Filter by authenticity">
+                          <option value="All">All</option>
+                          <option value="VERIFIED">Verified</option>
+                          <option value="DEBUNKED">Debunked Fake</option>
+                          <option value="DEVELOPING">Developing</option>
+                          <option value="UNVERIFIED">Unverified</option>
+                        </select>
+                      </div>
+                    </th>
+                    <th class="col-xai">Top Keywords</th>
+                    <th class="col-action">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="history-tbody">
+                  <!-- Dynamically populated history rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
+    </div>
+  </div>
+
+  <!-- SYSTEM SETTINGS MODAL -->
+  <div class="modal-overlay" id="settings-modal" style="display: none;">
+    <div class="clean-card modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <i class="fa-solid fa-gear" style="color: #4f46e5;"></i>
+          <h3>System Settings</h3>
+        </div>
+        <button class="modal-close-btn" id="settings-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-group">
+          <div class="settings-row">
+            <div>
+              <div class="settings-title">Visual Theme Mode</div>
+              <div class="settings-desc">Switch between SaaS Light Grid and Dark Blueprint.</div>
+            </div>
+            <button class="theme-toggle-btn" id="theme-toggle-btn" title="Toggle Theme">
+              <i class="fa-solid fa-moon" id="theme-btn-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-title" style="margin-bottom: 8px;">Model Pipeline Specification</div>
+          <div class="model-spec-box">
+            <div class="spec-row"><span>Algorithm:</span> <strong>Logistic Regression (L2, C=2.0)</strong></div>
+            <div class="spec-row"><span>Feature Extractor:</span> <strong>TF-IDF N-gram (1, 2) Max 15,000</strong></div>
+            <div class="spec-row"><span>Training Corpus:</span> <strong>94,336 Verified Headlines</strong></div>
+            <div class="spec-row"><span>Current Accuracy:</span> <strong>90.84% (Macro F1: 90.04%)</strong></div>
+            <div class="spec-row"><span>SSRF Shield:</span> <strong>Active & Enforced</strong></div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-title" style="margin-bottom: 8px;">Account Actions</div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn-clean-outline" id="modal-switch-account-btn" style="flex: 1;">
+              <i class="fa-solid fa-user-plus"></i> Switch / Sign In
+            </button>
+            <button class="btn-clean-danger" id="modal-logout-btn" style="flex: 1;">
+              <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTH SCREEN (Dedicated full-screen login / sign up — app hidden behind) -->
+  <div class="auth-screen-overlay" id="auth-modal" style="display: {% if is_authenticated %}none{% else %}flex{% endif %};">
+    <div class="clean-card modal-card auth-modal-card">
+      <div class="modal-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 10px;">
+        <div class="modal-title-wrap">
+          <div class="auth-icon-badge" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 17px;">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 0; line-height: 1.2;">Clickbait Detector</h3>
+            <p style="margin: 3px 0 0 0; font-size: 12px; color: #64748b;">Sign in to access the platform</p>
+          </div>
+        </div>
+        <!-- No close button — login is required -->
+      </div>
+
+      <div class="auth-tab-switch">
+        <button id="tab-auth-login" class="tab-btn active">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In
+        </button>
+        <button id="tab-auth-register" class="tab-btn">
+          <i class="fa-solid fa-user-plus"></i> Create Account
+        </button>
+      </div>
+
+      <div id="auth-alert" class="alert-message"></div>
+
+      <!-- Login Form -->
+      <form id="login-form">
+        <div class="form-group">
+          <label><i class="fa-solid fa-envelope"></i> Email Address</label>
+          <input type="email" id="login-email" class="clean-input" placeholder="user@example.com" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-lock"></i> Password</label>
+          <div class="password-wrapper">
+            <input type="password" id="login-password" class="clean-input" placeholder="Enter your password" required autocomplete="current-password">
+            <button type="button" class="toggle-password-btn" data-target="login-password" title="Show / Hide Password">
+              <i class="fa-solid fa-eye-slash"></i>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="gradient-action-btn auth-submit-btn" style="width: 100%; margin-top: 8px;">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In
+        </button>
+        <p style="text-align:center; margin-top:12px; font-size:12px; color:#64748b;">
+          Don't have an account? 
+          <a href="#" id="switch-to-register-link" style="color:#6366f1; font-weight:600; text-decoration:none;">Create one free</a>
+        </p>
+      </form>
+
+      <!-- Register Form -->
+      <form id="register-form" style="display: none;">
+        <div class="form-group">
+          <label><i class="fa-solid fa-user"></i> Full Name</label>
+          <input type="text" id="reg-name" class="clean-input" placeholder="Type your full name..." required>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-envelope"></i> Email Address</label>
+          <input type="email" id="reg-email" class="clean-input" placeholder="user@example.com" required>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-lock"></i> Password</label>
+          <div class="password-wrapper">
+            <input type="password" id="reg-password" class="clean-input" placeholder="Create a secure password" required>
+            <button type="button" class="toggle-password-btn" data-target="reg-password" title="Show / Hide Password">
+              <i class="fa-solid fa-eye-slash"></i>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i class="fa-solid fa-shield-halved"></i> Confirm Password</label>
+          <div class="password-wrapper">
+            <input type="password" id="reg-confirm-password" class="clean-input" placeholder="Confirm your password" required>
+            <button type="button" class="toggle-password-btn" data-target="reg-confirm-password" title="Show / Hide Password">
+              <i class="fa-solid fa-eye-slash"></i>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="gradient-action-btn auth-submit-btn" style="width: 100%; margin-top: 8px;">
+          <i class="fa-solid fa-user-plus"></i> Create Account
+        </button>
+        <p style="text-align:center; margin-top:12px; font-size:12px; color:#64748b;">
+          Already have an account? 
+          <a href="#" id="switch-to-login-link" style="color:#6366f1; font-weight:600; text-decoration:none;">Sign in</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}?v=2.4"></script>
+</body>
+</html>
